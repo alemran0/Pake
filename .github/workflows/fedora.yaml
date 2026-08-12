@@ -1,0 +1,62 @@
+name: Build WhatsApp with Pake
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: fedora:latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf update -y
+          dnf install -y \
+            git \
+            curl \
+            wget \
+            file \
+            tar \
+            gcc \
+            gcc-c++ \
+            make \
+            openssl-devel \
+            webkit2gtk4.1-devel \
+            libappindicator-gtk3-devel \
+            librsvg2-devel \
+            pkg-config \
+            nodejs \
+            npm
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Install Pake
+        run: npm install -g pake-cli
+
+      - name: Build WhatsApp RPM
+        run: |
+          pake https://web.whatsapp.com \
+            --name "WhatsApp" \
+            --targets rpm \
+            --app-version 1.0.0
+
+      - name: Find output
+        run: |
+          echo "=== Generated files ==="
+          find . -type f \( -name "*.rpm" -o -name "*.AppImage" \) -print
+
+      - name: Upload RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhatsApp-Fedora-RPM
+          path: "**/*.rpm"
+          if-no-files-found: error

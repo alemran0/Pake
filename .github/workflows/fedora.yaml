@@ -1,4 +1,4 @@
-name: Build WhatsApp with Pake
+name: Build WhatsApp
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ jobs:
       image: fedora:latest
 
     steps:
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           dnf update -y
           dnf install -y \
@@ -20,41 +20,53 @@ jobs:
             wget \
             file \
             tar \
+            gzip \
             gcc \
             gcc-c++ \
             make \
+            pkg-config \
             openssl-devel \
             webkit2gtk4.1-devel \
             libappindicator-gtk3-devel \
             librsvg2-devel \
-            pkg-config \
+            libxdo-devel \
             nodejs \
             npm
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check versions
+      # THIS WAS MISSING
+      - name: Install Rust
         run: |
-          node --version
-          npm --version
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+            | sh -s -- -y
+
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.cargo/bin:$PATH"
+
+          rustc --version
+          cargo --version
 
       - name: Install Pake
-        run: npm install -g pake-cli
+        run: |
+          npm install -g pake-cli
+          pake --version
 
       - name: Build WhatsApp RPM
         run: |
-          pake https://web.whatsapp.com \
+          export PATH="$HOME/.cargo/bin:$PATH"
+
+          pake "https://web.whatsapp.com" \
             --name "WhatsApp" \
-            --targets rpm \
-            --app-version 1.0.0
+            --targets rpm
 
-      - name: Find output
+      - name: Find RPM
         run: |
-          echo "=== Generated files ==="
-          find . -type f \( -name "*.rpm" -o -name "*.AppImage" \) -print
+          echo "===== RPM FILES ====="
+          find . -type f -name "*.rpm" -print
 
-      - name: Upload RPM
+      - name: Upload Fedora RPM
         uses: actions/upload-artifact@v4
         with:
           name: WhatsApp-Fedora-RPM
